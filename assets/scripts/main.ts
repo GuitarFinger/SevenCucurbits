@@ -78,14 +78,14 @@ export default class Main extends cc.Component {
     /**
      * 七个输入值
      */
-    // sevenInput: object = {};
+    sevenInput: object = {};
 
     // LIFE-CYCLE CALLBACKS:
 
     onLoad () {
         this.fixLinkNode = fixValDLL.head;
         ScreenTips.screenTipPreFab = this.screenTipPreFab;
-        // this.initSevenInput();
+        this.initSevenInput();
     }
 
     start () {
@@ -131,8 +131,6 @@ export default class Main extends cc.Component {
     judgeBaseInput = () => {
         if (!Utils.isFixValue(this.inputList, INPUT_NUMS) || !Utils.isRepeat(this.inputList)) {
             Global.emitter.dispatch(EMsg.SCREEN_TIPS, new DTip(this.node, '输入的值必须为1-10, 且不能重复'));
-            this.resetCenterNodes();
-            this.resetResultNodes();
             return false;
         }
 
@@ -145,8 +143,6 @@ export default class Main extends cc.Component {
     judgeMultiple = () => {
         if (!Utils.isPositiveInteger(this.multiple)) {
             Global.emitter.dispatch(EMsg.SCREEN_TIPS, new DTip(this.node, '输入的倍数必须为正整数'));
-            this.resetCenterNodes();
-            this.resetResultNodes();
             return false;
         }
 
@@ -160,8 +156,6 @@ export default class Main extends cc.Component {
         const len = Object.keys(this.inputList).length;
         if (len != INPUT_NUMS.length) {
             Global.emitter.dispatch(EMsg.SCREEN_TIPS, new DTip(this.node, `还有${INPUT_NUMS.length - len}个值没填, 请将输入值填完`));
-            this.resetCenterNodes();
-            this.resetResultNodes();
             return;
         }
 
@@ -187,40 +181,12 @@ export default class Main extends cc.Component {
      * 生成结果矩阵
      */
     calcCenterMatrix () {
-        // for (let i = 1; i <= 7; i++) {
-        //     if (i === 7) {
-        //         this.sevenInput[i] = this.getInputValArr();
-        //     } else {
-        //         this.sevenInput[i] = [...this.sevenInput[i+1]];
-        //     }
-        // }
-
-        // console.log(this.sevenInput);
-
-        this.centerMatrix = [];
-
-        for (let i = MIN_BASE; i <= MAX_BASE; i++) {
-            const stringVal = this.inputList[i];
-            const numberVal = Number(stringVal);
-            const tempArr: any = [];
-
-            if (i === 1) {
-                if (SPECIAL_NUMS.indexOf(stringVal) >= 0) {
-                    for (let j = numberVal; tempArr.length < MAX_LEN; j--) {
-                        tempArr.unshift(String(j));
-                    }
-                } else {
-                    tempArr.push(stringVal);
-                    for (let j = 0; j < MAX_LEN-1; j++) {
-                        tempArr.push('/');
-                    }
-                }
+        for (let i = 1; i <= 7; i++) {
+            if (i === 7) {
+                this.sevenInput[i] = this.getInputValArr();
             } else {
-                const preArr = this.centerMatrix[i-1-MIN_BASE];
-                tempArr.push(stringVal, ...preArr.slice(0, -1));
+                this.sevenInput[i] = [...this.sevenInput[i+1]];
             }
-
-            this.centerMatrix.push(tempArr);
         }
     }
 
@@ -228,14 +194,11 @@ export default class Main extends cc.Component {
      * 生成矩阵节点
      */
     generateCenterMatrixNodes () {
-
-        for (let i = 0; i < this.centerMatrix.length; i++) {
+        for (let i = 0; i < 10; i++) {
             const boxNode = this.boxCenter.getChildByName(`box_${Utils.fillPreZero(i+1, 2)}`);
-            const reverseArr = [...this.centerMatrix[i]].reverse();
-
-            for (let j = 0; j < reverseArr.length; j++) {
-                const itemNode = boxNode.getChildByName(`item_center${Utils.fillPreZero(j+1, 2)}`);
-                itemNode.getChildByName('text').getComponent(cc.Label).string = `${reverseArr[j]}`;
+            for (let j = 7; j >= 1; j--) {
+                const itemNode = boxNode.getChildByName(`item_center${Utils.fillPreZero(j, 2)}`);
+                itemNode.getChildByName('text').getComponent(cc.Label).string = `${this.sevenInput[j].length ? this.sevenInput[j][i] : ''}`;
             }
         }
     }
@@ -244,24 +207,31 @@ export default class Main extends cc.Component {
      * 计算结果数组
      */
     calcResultArr () {
+        const seventh = this.sevenInput[7];
+        const sixth = this.sevenInput[6];
+
         this.fixLinkNode = fixValDLL.head;
         this.resultArr = [];
 
-        for (let i = 0; i < this.centerMatrix.length; i++) {
-            const row: any[] = this.centerMatrix[i];
-            const firstType = MIN_NUMS.indexOf(row[0]) >= 0 ? 'min' :
-                                                               MAX_NUMS.indexOf(row[0]) >= 0 ? 'max' :
-                                                                                                row[0];
-            const secondType = MIN_NUMS.indexOf(row[1]) >= 0 ? 'min' :
-                                                                MAX_NUMS.indexOf(row[1]) >= 0 ? 'max' :
-                                                                                                row[1];
-            if (firstType === '/' || secondType === '/' || firstType !== secondType) {
-                this.resultArr.push(Number(this.fixLinkNode.element) * Number(this.multiple || 1));
-                this.fixLinkNode = this.fixLinkNode.next;
-            }
-            else if (firstType === secondType) {
-                this.resultArr.push(Number(fixValDLL.head.element) * Number(this.multiple || 1));
-                this.fixLinkNode = fixValDLL.head.next;
+        for (let i = 0; i < seventh.length; i++) {
+            if (!sixth.length) {
+                this.resultArr.push(fixValDLL.head.element);
+            } else {
+                const firstType = MIN_NUMS.indexOf(seventh[i]) >= 0 ? 'min' :
+                                                               MAX_NUMS.indexOf(seventh[i]) >= 0 ? 'max' :
+                                                                                                    seventh[i];
+                const secondType = MIN_NUMS.indexOf(sixth[i]) >= 0 ? 'min' :
+                                                                MAX_NUMS.indexOf(sixth[i]) >= 0 ? 'max' :
+                                                                                                   sixth[i];
+
+                if (!firstType || !secondType || firstType !== secondType) {
+                    this.resultArr.push(Number(this.fixLinkNode.element) * Number(this.multiple || 1));
+                    this.fixLinkNode = this.fixLinkNode.next;
+                }
+                else if (firstType === secondType) {
+                    this.resultArr.push(Number(fixValDLL.head.element) * Number(this.multiple || 1));
+                    this.fixLinkNode = fixValDLL.head.next;
+                }
             }
         }
     }
@@ -311,10 +281,10 @@ export default class Main extends cc.Component {
 
         this.multiple = 1;
 
-        if (flag) {
-            this.resetCenterNodes();
-            this.resetResultNodes();
-        }
+        // if (flag) {
+        //     this.resetCenterNodes();
+        //     this.resetResultNodes();
+        // }
     }
 
     /**
@@ -328,10 +298,10 @@ export default class Main extends cc.Component {
 
         this.inputList = {};
 
-        if (flag) {
-            this.resetCenterNodes();
-            this.resetResultNodes();
-        }
+        // if (flag) {
+        //     this.resetCenterNodes();
+        //     this.resetResultNodes();
+        // }
     }
 
     /**
@@ -342,6 +312,8 @@ export default class Main extends cc.Component {
         this.resetResultNodes();
         this.resetInitMutiple();
         this.resetBoxInput();
+        this.initSevenInput();
+        this.inputList = {};
     }
 
 }
