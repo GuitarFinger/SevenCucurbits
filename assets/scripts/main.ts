@@ -70,7 +70,8 @@ export default class Main extends cc.Component {
     /**
      * 当前固定值链表节点
     */
-    fixLinkNode: LinkNode = null;
+    fixLinkNodes: Object = {};
+    LinkNode = null;
     /**
      * 结果值
      */
@@ -83,9 +84,8 @@ export default class Main extends cc.Component {
     // LIFE-CYCLE CALLBACKS:
 
     onLoad () {
-        this.fixLinkNode = fixValDLL.head;
         ScreenTips.screenTipPreFab = this.screenTipPreFab;
-        this.initSevenInput();
+        this.init();
     }
 
     start () {
@@ -93,11 +93,18 @@ export default class Main extends cc.Component {
     }
 
     // update (dt) {}
-    initSevenInput () {
+    init () {
         for (let i = 1; i <= 7; i++) {
             this.sevenInput[i] = [];
+            
+        }
+
+        for (let j = 0; j < 10; j++) {
+            this.fixLinkNodes[j] = fixValDLL.head;
         }
     }
+
+    
     /**
      * 基本数字改变
      */
@@ -210,12 +217,14 @@ export default class Main extends cc.Component {
         const seventh = this.sevenInput[7];
         const sixth = this.sevenInput[6];
 
-        this.fixLinkNode = fixValDLL.head;
+        // this.fixLinkNode = fixValDLL.head;
+
         this.resultArr = [];
 
         for (let i = 0; i < seventh.length; i++) {
             if (!sixth.length) {
-                this.resultArr.push(fixValDLL.head.element);
+                this.resultArr.push(Number(fixValDLL.head.element) * Number(this.multiple || 1));
+                this.fixLinkNodes[i] = fixValDLL.head.next;
             } else {
                 const firstType = MIN_NUMS.indexOf(seventh[i]) >= 0 ? 'min' :
                                                                MAX_NUMS.indexOf(seventh[i]) >= 0 ? 'max' :
@@ -225,12 +234,12 @@ export default class Main extends cc.Component {
                                                                                                    sixth[i];
 
                 if (!firstType || !secondType || firstType !== secondType) {
-                    this.resultArr.push(Number(this.fixLinkNode.element) * Number(this.multiple || 1));
-                    this.fixLinkNode = this.fixLinkNode.next;
+                    this.resultArr.push(Number(this.fixLinkNodes[i].element) * Number(this.multiple || 1));
+                    this.fixLinkNodes[i] = this.fixLinkNodes[i].next;
                 }
                 else if (firstType === secondType) {
                     this.resultArr.push(Number(fixValDLL.head.element) * Number(this.multiple || 1));
-                    this.fixLinkNode = fixValDLL.head.next;
+                    this.fixLinkNodes[i] = fixValDLL.head.next;
                 }
             }
         }
@@ -280,11 +289,6 @@ export default class Main extends cc.Component {
         inputNode.getComponent(cc.EditBox).string = '';
 
         this.multiple = 1;
-
-        // if (flag) {
-        //     this.resetCenterNodes();
-        //     this.resetResultNodes();
-        // }
     }
 
     /**
@@ -297,11 +301,6 @@ export default class Main extends cc.Component {
         }
 
         this.inputList = {};
-
-        // if (flag) {
-        //     this.resetCenterNodes();
-        //     this.resetResultNodes();
-        // }
     }
 
     /**
@@ -312,7 +311,7 @@ export default class Main extends cc.Component {
         this.resetResultNodes();
         this.resetInitMutiple();
         this.resetBoxInput();
-        this.initSevenInput();
+        this.init();
         this.inputList = {};
     }
 
